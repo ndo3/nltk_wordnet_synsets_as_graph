@@ -276,7 +276,7 @@ class AdjectiveGraph:
         og_node = self.node_dictionary.word_to_node[word]
         # Get the list of the antonym edges:
         antonym_edges = og_node.list_of_antonym_edges
-        antonym_nodes = [self.get_synonymous_words(og_node, edge) for edge in antonym_edges]
+        antonym_nodes = [self.get_opposite_node(og_node, edge) for edge in antonym_edges]
         return_list = [node.word for node in antonym_nodes]
         return return_list
         
@@ -293,7 +293,7 @@ class AdjectiveGraph:
 def graph_analysis():
     # Making a new Adjective Graph
     new_adjective_graph = AdjectiveGraph()
-    print(new_adjective_graph.get_antonymous_words('good'))
-    print(new_adjective_graph.get_synonymous_words('good'))
+    print(new_adjective_graph.get_antonymous_words('terrific'))
+    print(new_adjective_graph.get_synonymous_words('terrific'))
     
 graph_analysis()
