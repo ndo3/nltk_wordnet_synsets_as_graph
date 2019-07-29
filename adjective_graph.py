@@ -108,6 +108,7 @@ class NodeDictionary:
         # cuz there is no way to hash a Node
         self.word_to_id = {}
         self.word_to_node = {}
+        self.word_to_num_synsets = {}
 
 class AdjectiveGraph:
     def __init__(self):
@@ -140,6 +141,7 @@ class AdjectiveGraph:
             self.node_dictionary.word_to_node[word] = new_node
             self.node_dictionary.id_to_node[id] = word
             self.node_dictionary.list_of_all_nodes.append(new_node)
+            self.node_dictionary.word_to_num_synsets[word] = len(new_node.list_of_synsets)
 
     def load_synset_edges(self):
         ############# ----- BEGIN DEFINING HELPER FUNCTIONF FOR THIS FUNCTION ----- #############
@@ -243,7 +245,7 @@ class AdjectiveGraph:
         elif edge.node_two == node_one: return edge.node_one
         else: raise InvalidGraphException("The input edge to the function be not connected to the node_one also inputted.")
     
-    def get_synonymous_words(self, word, permitted_level=1):
+    def get_synonymous_words(self, word, permitted_level=2):
         # Get the necessary first informations
         visited_nodes, levels_dictionary, current_level, og_node = [], {}, 0, self.node_dictionary.word_to_node[word]
         return_list = []
@@ -279,10 +281,14 @@ class AdjectiveGraph:
         antonym_nodes = [self.get_opposite_node(og_node, edge) for edge in antonym_edges]
         return_list = [node.word for node in antonym_nodes]
         return return_list
-        
-        
-            
 
+    def rank_number_of_synsets(self, word, word_based=True):
+        if word_based:
+            synonymous_words = self.get_synonymous_words(word) + [word]
+            return_dict = {k: self.node_dictionary.word_to_num_synsets[k] for k in synonymous_words}
+        else: return_dict = self.node_dictionary.word_to_num_synsets
+        return sorted(return_dict.items(), key=lambda kv: kv[1])
+            
 
 ################################################################################################
 ######## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #########
@@ -293,7 +299,14 @@ class AdjectiveGraph:
 def graph_analysis():
     # Making a new Adjective Graph
     new_adjective_graph = AdjectiveGraph()
-    print(new_adjective_graph.get_antonymous_words('terrific'))
-    print(new_adjective_graph.get_synonymous_words('terrific'))
+    # print(new_adjective_graph.get_antonymous_words('terrific'))
+    # print(new_adjective_graph.get_synonymous_words('terrific'))
+    #list_of_the_most_general_words_ever = ['angry', 'bad', 'big', 'clean', 'cold', 'dirty', 'funny', 'good', 'hot', 'hungry', 'scary', 'small', 'surprising', 'tired', 'ugly', 'fat', "colorful", "mad"]
+    #for word in list_of_the_most_general_words_ever:
+    #    print(word)
+    #    print(new_adjective_graph.rank_number_of_synsets(word))
+    #    print("-=-=-=-=-=-=-=-=-=-=-=-=\n\n\n")
+    print(new_adjective_graph.rank_number_of_synsets('happy', word_based=False))    
+    # lets keep it business, lets keep it casual
     
 graph_analysis()
