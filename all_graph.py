@@ -69,23 +69,18 @@ class NodeDictionary:
 
 
 
-
-
-
 #### THIS CODE WAS ONCE USED TO WRITE THE STUFF TO ADJ_TO_NUM_ASSOCIATED_LEMMAS
-def adj_to_num_associated_lemmas():
+def to_num_associated_lemmas():
     og_dict = {}
-    all_adjectives = from_synsets_to_words(wn.all_synsets('a'))
-    for adj in all_adjectives:
-        og_dict[adj] = len(get_senses_of_a_word_based_on_a_list_of_synsets(adj, wn.synsets(adj, pos=wn.ADJ)))
-        if adj == 'bad':
-            print(og_dict)
+    all_verbs = from_synsets_to_words(wn.all_synsets('v'))
+    for verb in all_verbs:
+        og_dict[verb] = len(get_senses_of_a_word_based_on_a_list_of_synsets(verb, wn.synsets(verb, pos=wn.VERB)))
         # if len(get_senses_of_a_word_based_on_a_list_of_synsets(adj, wn.synsets(adj, pos=wn.ADJ))) > 1 :
         #     print(adj)
         # if adj == 'bad':
         #     print(from_synsets_to_lemmas(wn.synsets(adj, pos=wn.ADJ)))
         
-    with open("adj_to_num_associated_senses.json", "w") as to_write_file:
+    with open("verb_to_num_associated_senses.json", "w") as to_write_file:
         json.dump(og_dict, to_write_file)
 
-    # print(sorted(og_dict.items(), key=lambda kv: kv[1]))
+to_num_associated_lemmas()

@@ -31,7 +31,7 @@ class AdjectiveNode:
         # the node because the types of synsets are only the nature of the edges
         # and not all the edges themselves
         self.list_of_synsets = wn.synsets(word, pos=wn.ADJ)
-        self.list_of_lemmas = [] # Just added - July 30th, need to update this
+        self.list_of_senses = get_senses_of_a_word_based_on_a_list_of_synsets(word, self.list_of_synsets) # Just added - July 30th, need to update this
         # Lists to store the important informations
         self.list_of_edges, self.list_of_synset_edges, self.list_of_antonym_edges = [], [], []
         # By the way, Brooklyn Nine-Nine rocks
@@ -172,7 +172,6 @@ class AdjectiveGraph:
         while (current_level < permitted_level and len(levels_dictionary[current_level]) != 0):
             # You would get increase the current_level
             current_level += 1
-            print(current_level)
             # And then you would make the new level
             new_level_array = []
             for old_node in levels_dictionary[current_level - 1]:
@@ -187,9 +186,7 @@ class AdjectiveGraph:
             # And then set the current_level to be new_level_array in the dict
             levels_dictionary[current_level] = new_level_array
             return_list.extend(new_level_array)
-        return_list = [node.word for node in return_list]
-        # if return_dict:
-            # return return_list, 
+        return_list = [node.word for node in return_list] 
         return return_list
     
     def get_antonymous_words(self, word):
@@ -208,7 +205,7 @@ class AdjectiveGraph:
             # update the number of antonyms
             self.node_dictionary.word_to_num_antonyms[word] = len(antonyms)
         if export:
-            with open("number_of_antonyms.json", "w") as to_write_file:
+            with open("adj_number_of_antonyms.json", "w") as to_write_file:
                 json.dump(self.node_dictionary.word_to_num_antonyms, to_write_file)
         return sorted(self.node_dictionary.word_to_num_antonyms.items(), key=lambda kv: kv[1])
 
@@ -220,9 +217,7 @@ class AdjectiveGraph:
         else:
             return_dict = {}
             for word in self.all_words:
-                print(word)
                 return_dict[word] = len(self.get_synonymous_words(word)) + 1
-            # return_dict = self.node_dictionary.word_to_num_synsets
             with open("number_of_synsets_threedegs.json", "w") as to_write_file:
                 json.dump(return_dict, to_write_file)
         return sorted(return_dict.items(), key=lambda kv: kv[1])
@@ -233,19 +228,3 @@ class AdjectiveGraph:
 ######## -=-=-=-=-=-=-=-=-=-=-=-= PART OF ANALYSIS FOR GRAPH =-=-=-=-=-=-=-=-=-=-=-=-= #########
 ######## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #########
 ################################################################################################
-
-def graph_analysis():
-    # Making a new Adjective Graph
-    new_adjective_graph = AdjectiveGraph()
-    # print(new_adjective_graph.get_antonymous_words('terrific'))
-    # print(new_adjective_graph.get_synonymous_words('terrific'))
-    #list_of_the_most_general_words_ever = ['angry', 'bad', 'big', 'clean', 'cold', 'dirty', 'funny', 'good', 'hot', 'hungry', 'scary', 'small', 'surprising', 'tired', 'ugly', 'fat', "colorful", "mad"]
-    #for word in list_of_the_most_general_words_ever:
-    #    print(word)
-    #    print(new_adjective_graph.rank_number_of_synsets(word))
-    #    print("-=-=-=-=-=-=-=-=-=-=-=-=\n\n\n")
-    print(new_adjective_graph.rank_number_of_synsets('happy', word_based=False))    
-    # lets keep it business, lets keep it casual
-    # print(new_adjective_graph.fill_number_of_antonyms())
-    
-graph_analysis()
