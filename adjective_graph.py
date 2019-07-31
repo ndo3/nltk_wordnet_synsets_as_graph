@@ -2,6 +2,9 @@
 
 # first import wordnet
 from nltk.corpus import wordnet as wn
+from all_graph import *
+import json
+from collections import defaultdict
 
 class InvalidInputException(Exception):
     def __str__(self):
@@ -11,108 +14,35 @@ class InvalidGraphException(Exception):
     def __str__(self):
         return "Ruh Roh. Something is bad. Contact Nam at ndo3@cs.brown.edu."
 
-################################################################################################
-####### -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- ##########
-####### -=-=-=-=-=-=-=-=-=-=-=-=-= HELPER FUNCTIONS PORTION =-=-=-=-=-=-=-=-=-=-=-=-= ##########
-####### -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- ##########
-################################################################################################
-
-def from_synsets_to_words(list_of_synsets):
-    list_of_words = []
-    for synset in list_of_synsets:
-        lemmas = synset.lemmas()
-        for lemma in lemmas:
-            if lemma.name() not in list_of_words:
-                list_of_words.append(lemma.name())
-    return list_of_words
-
-def from_synsets_to_lemmas(list_of_synsets):
-    list_of_lemmas = []
-    for synset in list_of_synsets:
-        lemmas = synset.lemmas()
-        for lemma in lemmas:
-            if lemma not in list_of_lemmas: list_of_lemmas.append(lemma)
-    return list_of_lemmas
-
-
-def from_words_to_synsets(list_of_words, what_type=wn.ADJ):
-    list_of_synsets = []
-    for word in list_of_words:
-        new_synsets = wn.synsets(word, pos=what_type)
-        for synset in new_synsets:
-            # Appending synset
-            if synset not in list_of_synsets:
-                list_of_synsets.append(synset)
-    return list_of_synsets
-
-def from_synset_to_list_of_words(synset):
-    lemmas = synset.lemmas()
-    return [lemma.name() for lemma in lemmas]
-
-def add_key_value_to_dictionary_that_is_of_type_key_to_a_list(key, value, the_dictionary):
-    if key in the_dictionary:
-        the_dictionary[key].append(value)
-    else:
-        the_dictionary[key] = [value]
-
 
 ################################################################################################
 ######## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #########
 ######## -=-=-=-=-=-=-=-=-=-=-=-=-= ADJECTIVE GRAPH PORTION =-=-=-=-=-=-=-=-=-=-=-=-=- #########
 ######## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #########
 ################################################################################################
-
-class SynsetEdge:
-    def __init__(self, node_one, node_two, synset):
-        # Storing the important information
-        self.node_one = node_one
-        self.node_two = node_two
-        self.synset = synset
-        # and then just storing type_of_connection so that it's easily accessible
-        self.type_of_connection = 'synonymy'
-        
-class AntonymEdge:
-    def __init__(self, node_one, node_two):
-        self.node_one = node_one
-        self.node_two = node_two
-        self.type_of_connection = 'antonymy'
         
 
 class AdjectiveNode:
     def __init__(self, id, word):
-        # maybe for housekeeping - we might need an ID later
-        self.id = id
-        # Instantiating given the word and lemma and word_type
-        self.word = word
+        # maybe for housekeeping - we might need an ID later; Instantiating given the word and lemma and word_type
+        self.id, self.word = id, word
         # There is a list of synsets which are associated with that word, which
         # will say that we will also need a list of edges that are connected to
         # the node because the types of synsets are only the nature of the edges
         # and not all the edges themselves
         self.list_of_synsets = wn.synsets(word, pos=wn.ADJ)
+        self.list_of_lemmas = [] # Just added - July 30th, need to update this
         # Lists to store the important informations
-        self.list_of_edges = []
-        self.list_of_synset_edges = []
-        self.list_of_antonym_edges = []
+        self.list_of_edges, self.list_of_synset_edges, self.list_of_antonym_edges = [], [], []
         # By the way, Brooklyn Nine-Nine rocks
         # The dictionary that is id (of node that we are connected to) -> [synsets that they are connected by]
-        self.connections = {} # This connections is specifically for synsets connections
-        self.connections_edges = {} # This connections_edges is specifically for edges
-        self.antonymous_node_ids = []
+        self.connections, self.connections_edges, self.antonymous_node_ids = {}, {}, []
 
-
-class NodeDictionary:
-    def __init__(self, what_type=wn.ADJ):
-        self.list_of_all_nodes = []
-        self.id_to_node = {}
-        self.id_to_word = {} # extraly added, need to evaluate necessity
-        # cuz there is no way to hash a Node
-        self.word_to_id = {}
-        self.word_to_node = {}
-        self.word_to_num_synsets = {}
 
 class AdjectiveGraph:
     def __init__(self):
         self.node_dictionary = NodeDictionary()
+        self.all_words = from_synsets_to_words(wn.all_synsets('a'))
         self.load_graph()
     
     ######################### THIS PART IN THE CLASS IS TO INSTANTIATE ALL THE VARIABLES PROPERLY #########################
@@ -120,21 +50,17 @@ class AdjectiveGraph:
     # You would make the graph that has each node be the word, and each edge
     # represent a synset
     def load_graph(self):
-        # First, load all the nodes
-        self.load_nodes()
-        # Second, load all the synonym set edges
-        self.load_synset_edges()
-        # Third, load all the antonym set edges
-        self.load_antonym_edges()
+        self.load_nodes() # First, load all the nodes
+        self.load_synset_edges() # Second, load all the synonym set edges
+        self.load_antonym_edges() # Third, load all the antonym set edges
         
     # Function to load the words
     def load_nodes(self):
         # Get the list of all synsets
-        all_words = from_synsets_to_words(wn.all_synsets('a'))
+        all_words = self.all_words
         # For each word
         for id, word in enumerate(all_words):
-            # First create a node
-            new_node = AdjectiveNode(id, word)
+            new_node = AdjectiveNode(id, word) # First create a node
             # Then update the NodeDictionary
             assert word not in self.node_dictionary.word_to_id and word not in self.node_dictionary.word_to_node
             self.node_dictionary.word_to_id[word] = id
@@ -148,20 +74,14 @@ class AdjectiveGraph:
         # This helper function is to help determine if two nodes are addable
         def addable(node_one, node_two, synset):
             # If there exists no edge between the two yet
-            if node_two.id not in node_one.connections and node_one.id not in node_two.connections:
-                return True
+            if node_two.id not in node_one.connections and node_one.id not in node_two.connections: return True
             # If there exists both ids in other's respective dictionaries (check this so that there is no error :P)
             elif node_two.id in node_one.connections and node_one.id in node_two.connections:
-                if synset not in node_one.connections[node_two.id] and synset not in node_two.connections[node_one.id]:
-                    return True
+                if synset not in node_one.connections[node_two.id] and synset not in node_two.connections[node_one.id]: return True
                 # else if it is in both then we return false
-                elif synset in node_one.connections[node_two.id] and synset in node_two.connections[node_one.id]:
-                    return False
+                elif synset in node_one.connections[node_two.id] and synset in node_two.connections[node_one.id]: return False
                 else: raise InvalidGraphException('There exists asymmetry between adding synsets into the two nodes\' connections dictionary lists')
-            else: 
-                # print(node_two.id not in node_one.connections)
-                # print(node_one.id not in node_two.connections)
-                raise InvalidGraphException('There exists asymmetry between adding edges into the two nodes\' connections dictionary')
+            else: raise InvalidGraphException('There exists asymmetry between adding edges into the two nodes\' connections dictionary')
         # This helper function is to add edge between two nodes
         def add_edge(node_one, node_two, synset):
             # First, you would create a new edge
@@ -194,18 +114,14 @@ class AdjectiveGraph:
                 for node_two in associating_nodes:
                     # If node_one is not equal to node_two, or the nodes are not connected ! by ! the ! same ! synset !
                     # we would add an edge between them
-                    if node_one != node_two and addable(node_one, node_two, synset):
-                        add_edge(node_one, node_two, synset)
+                    if node_one != node_two and addable(node_one, node_two, synset): add_edge(node_one, node_two, synset)
 
 
     def load_antonym_edges(self):
         def addable(node_one, node_two):
-            if node_two.id not in node_one.antonymous_node_ids and node_one.id not in node_two.antonymous_node_ids:
-                return True
-            elif node_two.id in node_one.antonymous_node_ids and node_one.id in node_two.antonymous_node_ids:
-                return False
-            else: # error checking
-                raise InvalidGraphException('Something is messed up with keeping track of antonymous_node_ids')
+            if node_two.id not in node_one.antonymous_node_ids and node_one.id not in node_two.antonymous_node_ids: return True
+            elif node_two.id in node_one.antonymous_node_ids and node_one.id in node_two.antonymous_node_ids: return False
+            else: raise InvalidGraphException('Something is messed up with keeping track of antonymous_node_ids') # error checking
         def add_edge(node_one, node_two):
             # First, you would create a new Antonymous Edge
             new_edge = AntonymEdge(node_one, node_two)
@@ -245,7 +161,7 @@ class AdjectiveGraph:
         elif edge.node_two == node_one: return edge.node_one
         else: raise InvalidGraphException("The input edge to the function be not connected to the node_one also inputted.")
     
-    def get_synonymous_words(self, word, permitted_level=2):
+    def get_synonymous_words(self, word, permitted_level=2, return_dict=False):
         # Get the necessary first informations
         visited_nodes, levels_dictionary, current_level, og_node = [], {}, 0, self.node_dictionary.word_to_node[word]
         return_list = []
@@ -256,6 +172,7 @@ class AdjectiveGraph:
         while (current_level < permitted_level and len(levels_dictionary[current_level]) != 0):
             # You would get increase the current_level
             current_level += 1
+            print(current_level)
             # And then you would make the new level
             new_level_array = []
             for old_node in levels_dictionary[current_level - 1]:
@@ -271,6 +188,8 @@ class AdjectiveGraph:
             levels_dictionary[current_level] = new_level_array
             return_list.extend(new_level_array)
         return_list = [node.word for node in return_list]
+        # if return_dict:
+            # return return_list, 
         return return_list
     
     def get_antonymous_words(self, word):
@@ -282,11 +201,30 @@ class AdjectiveGraph:
         return_list = [node.word for node in antonym_nodes]
         return return_list
 
+    def fill_number_of_antonyms(self, export=True):
+        for word in self.node_dictionary.word_to_num_synsets:
+            # get number of antonyms
+            antonyms = self.get_antonymous_words(word)
+            # update the number of antonyms
+            self.node_dictionary.word_to_num_antonyms[word] = len(antonyms)
+        if export:
+            with open("number_of_antonyms.json", "w") as to_write_file:
+                json.dump(self.node_dictionary.word_to_num_antonyms, to_write_file)
+        return sorted(self.node_dictionary.word_to_num_antonyms.items(), key=lambda kv: kv[1])
+
+
     def rank_number_of_synsets(self, word, word_based=True):
         if word_based:
             synonymous_words = self.get_synonymous_words(word) + [word]
             return_dict = {k: self.node_dictionary.word_to_num_synsets[k] for k in synonymous_words}
-        else: return_dict = self.node_dictionary.word_to_num_synsets
+        else:
+            return_dict = {}
+            for word in self.all_words:
+                print(word)
+                return_dict[word] = len(self.get_synonymous_words(word)) + 1
+            # return_dict = self.node_dictionary.word_to_num_synsets
+            with open("number_of_synsets_threedegs.json", "w") as to_write_file:
+                json.dump(return_dict, to_write_file)
         return sorted(return_dict.items(), key=lambda kv: kv[1])
             
 
@@ -308,5 +246,6 @@ def graph_analysis():
     #    print("-=-=-=-=-=-=-=-=-=-=-=-=\n\n\n")
     print(new_adjective_graph.rank_number_of_synsets('happy', word_based=False))    
     # lets keep it business, lets keep it casual
+    # print(new_adjective_graph.fill_number_of_antonyms())
     
 graph_analysis()
